@@ -1,0 +1,2303 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>生死押注 賽球博弈</title>
+<style>
+  :root{color-scheme:dark;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family:system-ui,-apple-system,"Noto Sans TC","PingFang TC","Microsoft JhengHei",Arial;
+    color: rgba(255,255,255,.92);
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    background:
+      radial-gradient(1200px 800px at 18% 10%, rgba(90,120,255,.32), transparent 62%),
+      radial-gradient(1200px 900px at 82% 14%, rgba(255,80,140,.18), transparent 62%),
+      radial-gradient(1200px 900px at 55% 92%, rgba(40,255,210,.14), transparent 62%),
+      linear-gradient(180deg, rgba(255,255,255,.06), transparent 28%),
+      linear-gradient(180deg, #070812 0%, #050612 60%, #040410 100%);
+  }
+
+  .wrap{width:min(1260px,96vw); margin:14px auto 28px;}
+  .top{display:flex; gap:12px; align-items:flex-start; justify-content:space-between;}
+
+  @media (orientation: portrait){
+    .top{flex-direction:column;}
+    .left,.right{min-width: 96vw;}
+    #rulesLandscape{display:none;}
+    #rulesPortrait{display:block;}
+  }
+  @media (orientation: landscape){
+    .top{flex-direction:row; flex-wrap:nowrap;}
+    .left{flex:1.7; min-width: 720px;}
+    .right{flex:1; min-width: 360px; position:sticky; top:10px;}
+    #rulesLandscape{display:block;}
+    #rulesPortrait{display:none;}
+  }
+
+  .panel{
+    border:1px solid rgba(255,255,255,.14);
+    background:
+      radial-gradient(520px 280px at 15% 12%, rgba(255,255,255,.10), transparent 62%),
+      radial-gradient(520px 280px at 88% 18%, rgba(90,120,255,.16), transparent 62%),
+      linear-gradient(180deg, rgba(15,18,40,.74), rgba(10,10,24,.64));
+    border-radius:22px;
+    padding:12px;
+    box-shadow: 0 26px 110px rgba(0,0,0,.72);
+    backdrop-filter: blur(14px);
+  }
+
+  .hud{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;}
+  .pill{
+    border:1px solid rgba(255,255,255,.16);
+    background: linear-gradient(180deg, rgba(0,0,0,.30), rgba(0,0,0,.12));
+    border-radius:999px;
+    padding:6px 10px;
+    font-size:13px;
+    color: rgba(255,255,255,.86);
+    font-variant-numeric: tabular-nums;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
+    white-space:nowrap;
+  }
+
+  .hpbox{
+    border:1px solid rgba(255,255,255,.16);
+    background:
+      radial-gradient(240px 160px at 14% 25%, rgba(255,255,255,.10), transparent 65%),
+      linear-gradient(180deg, rgba(0,0,0,.32), rgba(0,0,0,.14));
+    border-radius:18px;
+    padding:10px 10px;
+    display:flex; gap:10px; align-items:center;
+    min-width: 340px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+  }
+  .hpbar{
+    position:relative;
+    width: 220px; height: 12px;
+    border-radius:999px;
+    background: rgba(255,255,255,.08);
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.12);
+  }
+  .hp-red,.hp-green{position:absolute; top:0; bottom:0;}
+  .hp-red{ right:0; background: linear-gradient(90deg, rgba(255,70,90,.98), rgba(255,130,150,.86)); }
+  .hp-green{ left:0; background: linear-gradient(90deg, rgba(60,255,170,.98), rgba(150,255,220,.80)); }
+  .hpnum{
+    font-variant-numeric: tabular-nums;
+    font-weight:950;
+    letter-spacing:.2px;
+    display:flex; gap:6px; align-items:baseline;
+    text-shadow: 0 12px 30px rgba(0,0,0,.45);
+  }
+  .hpnum .red{color:rgba(255,90,110,.98)}
+  .hpnum .green{color:rgba(60,255,170,.98)}
+
+  .small{font-size:12px; color:rgba(255,255,255,.74); line-height:1.8;}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+
+  canvas{
+    width:100%;
+    height:min(74vh, 980px);
+    display:block;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.14);
+    background:
+      radial-gradient(1000px 700px at 52% -6%, rgba(120,160,255,.18), transparent 66%),
+      radial-gradient(900px 600px at 30% 30%, rgba(255,80,140,.08), transparent 72%),
+      radial-gradient(900px 600px at 70% 50%, rgba(40,255,210,.07), transparent 72%),
+      linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+    box-shadow:
+      0 26px 120px rgba(0,0,0,.72),
+      inset 0 1px 0 rgba(255,255,255,.12);
+    user-select:none;
+    touch-action:none;
+  }
+  @media (orientation: landscape){
+    canvas{height:min(78vh, 740px);}
+  }
+
+  select{
+    border:1px solid rgba(255,255,255,.18);
+    background:
+      radial-gradient(160px 70px at 20% 20%, rgba(255,255,255,.10), transparent 68%),
+      linear-gradient(180deg, rgba(0,0,0,.28), rgba(0,0,0,.14));
+    color: rgba(255,255,255,.92);
+    padding:8px 10px;
+    border-radius:12px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+  }
+
+  button{
+    border:1px solid rgba(255,255,255,.18);
+    background:
+      radial-gradient(160px 80px at 30% 20%, rgba(255,255,255,.20), transparent 65%),
+      linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+    color: rgba(255,255,255,.94);
+    padding:10px 12px;
+    border-radius:14px;
+    cursor:pointer;
+    font-weight:950;
+    box-shadow: 0 14px 34px rgba(0,0,0,.40), inset 0 1px 0 rgba(255,255,255,.12);
+  }
+  button:hover{filter:brightness(1.08)}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+
+  .balllist{margin-top:10px; display:grid; gap:10px;}
+  .ball{
+    display:grid; grid-template-columns: 26px 1fr auto;
+    gap:10px; align-items:flex-start;
+    border:1px solid rgba(255,255,255,.12);
+    background:
+      radial-gradient(260px 160px at 18% 24%, rgba(255,255,255,.10), transparent 65%),
+      rgba(0,0,0,.18);
+    border-radius:16px;
+    padding:10px 10px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.09);
+  }
+  .dot{width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,.18); margin-top:3px;}
+  .ball .titleRow{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:4px;}
+  .ball .titleRow b{font-size:14px;}
+  .tag{
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.18);
+    border-radius:999px;
+    padding:4px 8px;
+    font-size:12px;
+    color:rgba(255,255,255,.80);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  }
+
+  table{width:100%; border-collapse:collapse; margin-top:10px; font-size:13px;}
+  th,td{padding:7px 6px; border-bottom:1px solid rgba(255,255,255,.10); text-align:left;}
+  th{color:rgba(255,255,255,.82); font-weight:950;}
+
+  .rules{
+    margin-top:12px;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:18px;
+    padding:12px;
+    background:
+      radial-gradient(420px 240px at 20% 15%, rgba(255,255,255,.08), transparent 68%),
+      linear-gradient(180deg, rgba(0,0,0,.32), rgba(0,0,0,.20));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .rules h3{margin:0 0 8px; font-size:14px;}
+  .legend{display:grid; gap:10px; margin-top:10px;}
+  .legendRow{
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:14px;
+    padding:10px;
+    background: rgba(0,0,0,.18);
+    line-height:1.9;
+  }
+  .legendRow b{display:inline-block; margin-right:8px;}
+
+  input[type="range"]{
+    -webkit-appearance:none;
+    width:260px;
+    height:18px;
+    background: transparent;
+  }
+  input[type="range"]::-webkit-slider-runnable-track{
+    height:8px;
+    border-radius:999px;
+    background: linear-gradient(90deg, rgba(40,255,210,.35), rgba(90,120,255,.28), rgba(255,80,140,.28));
+    border:1px solid rgba(255,255,255,.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.10);
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:18px; height:18px;
+    border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.90), rgba(255,255,255,.30));
+    border:1px solid rgba(255,255,255,.22);
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    margin-top:-6px;
+  }
+  input[type="range"]::-moz-range-track{
+    height:8px; border-radius:999px;
+    background: linear-gradient(90deg, rgba(40,255,210,.35), rgba(90,120,255,.28), rgba(255,80,140,.28));
+    border:1px solid rgba(255,255,255,.14);
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.90), rgba(255,255,255,.30));
+    border:1px solid rgba(255,255,255,.22);
+  }
+
+  .overlay{position:fixed; inset:0; display:none; place-items:center; background: rgba(0,0,0,.70); backdrop-filter: blur(16px); padding:16px;}
+  .modal{
+    width:min(820px, 94vw);
+    border:1px solid rgba(255,255,255,.16);
+    background:
+      radial-gradient(560px 340px at 18% 10%, rgba(90,120,255,.20), transparent 62%),
+      radial-gradient(560px 340px at 82% 10%, rgba(255,80,140,.12), transparent 62%),
+      radial-gradient(560px 340px at 60% 90%, rgba(40,255,210,.10), transparent 62%),
+      linear-gradient(180deg, rgba(15,18,40,.94), rgba(8,8,18,.92));
+    border-radius:20px;
+    padding:14px;
+    box-shadow: 0 20px 120px rgba(0,0,0,.70);
+  }
+  .modal h2{margin:0 0 8px; font-size:18px;}
+  .modal p{margin:0 0 10px; color:rgba(255,255,255,.78); line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="left">
+      <div class="hud">
+        <div class="hpbox">
+          <span class="pill" style="padding:4px 10px;">HP</span>
+          <div class="hpbar" id="hpbar">
+            <div class="hp-green" id="hpGreen"></div>
+            <div class="hp-red" id="hpRed"></div>
+          </div>
+          <div class="hpnum" id="hpNum"></div>
+        </div>
+        <span class="pill">狀態：<b id="state">檢視地圖</b></span>
+        <span class="pill">押注模式：<b id="betModeLabel">—</b></span>
+        <span class="pill">地圖：<b id="mapName">—</b></span>
+        <span class="pill">放大：<b id="zoomLabel">1.00×</b></span>
+      </div>
+
+      <canvas id="c"></canvas>
+
+      <div class="row" style="margin-top:10px;">
+        <label class="pill" style="display:flex; gap:10px; align-items:center; padding:8px 12px;">
+          放大檢視
+          <input id="zoom" type="range" min="1.00" max="2.20" step="0.01" value="1.00">
+        </label>
+        <span class="pill">拖曳／放開可慣性滑動；放大後可左右移動看細節</span>
+      </div>
+
+      <div class="rules" id="rulesLandscape">
+        <h3>遊戲規則與場地效果</h3>
+        <div class="small">
+          <b>勝負：</b>第一顆球到達終點即停止；其餘依<strong>剩餘距離</strong>排序。<br/>
+          <b>押注流程：</b>先選<strong>押注模式</strong>，再選要押的球（按「押注」立即開始、不可反悔）。<br/>
+          <b>結算：</b><b>只有第 1/2 名</b>能拿到生命值（下注×賠率×<b>1.00 / 0.50</b>）；若你押到<strong>最後一名</strong>，額外<strong>倒扣 10</strong>（生命值）。<br/>
+          <b>死亡：</b>HP ≤ 0 死亡並可重開。<br/>
+        </div>
+
+        <div class="legend">
+          <div class="legendRow small">
+            <b style="color:rgba(40,255,210,.95)">增益區</b>：加速更強。　
+            <b style="color:rgba(90,120,255,.95)">泥沼/反增益</b>：阻力更大、速度衰減更劇烈。　
+            <b style="color:rgba(255,80,140,.95)">煞車帶</b>：瞬間降速更明顯。　
+            <b style="color:rgba(200,120,255,.95)">黏滯區</b>：反彈變鈍、動能更容易被吃掉。　
+            <b style="color:rgba(255,210,80,.95)">彈跳區</b>：反彈更有力。　
+            <b style="color:rgba(255,255,255,.92)">重力帶</b>：經過時重力加大。
+          </div>
+          <div class="legendRow small">
+            <b style="color:rgba(40,255,210,.90)">風場</b>：強風沿風向拖拽。　
+            <b style="color:rgba(255,255,255,.92)">黑洞</b>：釘住 2 秒，結束後會被彈開。　
+            <b style="color:rgba(255,255,255,.92)">白洞</b>：傳送到周圍更遠距離。
+          </div>
+          <div class="legendRow small">
+            <b style="color:rgba(255,160,60,.95)">黏性桿（橘）</b>：可停球，並沿桿面滾下。　
+            <b style="color:rgba(255,255,255,.92)">滑落桿（銀白）</b>：不反射，改沿桿面滑下。　
+            <b style="color:rgba(80,170,255,.95)">移動桿（藍）</b>：橫移/斜移。　
+            <b style="color:rgba(60,255,170,.95)">旋轉桿/弧門（綠）</b>：順/逆時針轉動形成門。　
+            <b style="color:rgba(255,255,255,.90)">機關圈</b>：加速/減速/側推/低重力/少量傳送（藍球忽視圈圈）。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;">
+          <div class="row">
+            <label for="camMode">鏡頭：</label>
+            <select id="camMode">
+              <option value="auto" selected>跟隨下注球</option>
+              <option value="free">自由檢視（慣性滑動）</option>
+            </select>
+          </div>
+          <button id="btnReset">重置（HP 回 100）</button>
+        </div>
+
+        <div class="row" style="margin-top:10px; align-items:center;">
+          <label for="betMode">押注模式：</label>
+          <select id="betMode">
+            <option value="m1" selected>你好，我吃一點（小押 20HP）</option>
+            <option value="m2">這是一場豪賭，朋友（押一半）</option>
+            <option value="m3">所有，或一無所有（押上一切）</option>
+          </select>
+          <span class="pill">本次下注：<b id="betAmountLabel">—</b></span>
+        </div>
+
+        <div class="balllist" id="balllist"></div>
+
+        <div class="row" style="margin-top:10px;">
+          <button id="btnPause">暫停/繼續</button>
+          <button id="btnPreview">回到起點檢視</button>
+        </div>
+
+        <table>
+          <thead>
+          <tr><th>名次</th><th>球</th><th>剩餘距離</th><th>HP 變動</th></tr>
+          </thead>
+          <tbody id="resultBody">
+          <tr><td colspan="4" style="color:rgba(255,255,255,.65)">尚未開始（先選押注模式，再按任一球「押注」）</td></tr>
+          </tbody>
+        </table>
+
+        <div class="rules" id="rulesPortrait">
+          <h3>遊戲規則與場地效果</h3>
+          <div class="small">
+            <b>勝負：</b>第一顆球到達終點即停止；其餘依<strong>剩餘距離</strong>排序。<br/>
+            <b>押注流程：</b>先選<strong>押注模式</strong>，再選要押的球（按「押注」立即開始、不可反悔）。<br/>
+            <b>結算：</b><b>只有第 1/2 名</b>能拿到生命值（下注×賠率×<b>1.00 / 0.50</b>）；若你押到<strong>最後一名</strong>，額外<strong>倒扣 10</strong>（生命值）。<br/>
+            <b>死亡：</b>HP ≤ 0 死亡並可重開。<br/>
+          </div>
+
+          <div class="legend">
+            <div class="legendRow small">
+              <b style="color:rgba(40,255,210,.95)">增益區</b>：加速更強。　
+              <b style="color:rgba(90,120,255,.95)">泥沼/反增益</b>：阻力更大、速度衰減更劇烈。　
+              <b style="color:rgba(255,80,140,.95)">煞車帶</b>：瞬間降速更明顯。　
+              <b style="color:rgba(200,120,255,.95)">黏滯區</b>：反彈變鈍、動能更容易被吃掉。　
+              <b style="color:rgba(255,210,80,.95)">彈跳區</b>：反彈更有力。　
+              <b style="color:rgba(255,255,255,.92)">重力帶</b>：經過時重力加大。
+            </div>
+            <div class="legendRow small">
+              <b style="color:rgba(40,255,210,.90)">風場</b>：強風沿風向拖拽。　
+              <b style="color:rgba(255,255,255,.92)">黑洞</b>：釘住 2 秒，結束後會被彈開。　
+              <b style="color:rgba(255,255,255,.92)">白洞</b>：傳送到周圍更遠距離。
+            </div>
+            <div class="legendRow small">
+              <b style="color:rgba(255,160,60,.95)">黏性桿（橘）</b>：可停球，並沿桿面滾下。　
+              <b style="color:rgba(255,255,255,.92)">滑落桿（銀白）</b>：不反射，改沿桿面滑下。　
+              <b style="color:rgba(80,170,255,.95)">移動桿（藍）</b>：橫移/斜移。　
+              <b style="color:rgba(60,255,170,.95)">旋轉桿/弧門（綠）</b>：順/逆時針轉動形成門。　
+              <b style="color:rgba(255,255,255,.90)">機關圈</b>：加速/減速/側推/低重力/少量傳送。
+            </div>
+          </div>
+        </div>
+
+        <div class="small" style="margin-top:10px;">
+          操作：拖曳 / 觸控滑動可上下左右；放開會慣性滑動一段。<br/>
+          押注後會自動把頁面捲到地圖區域。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">結果</h2>
+    <p id="modalText"></p>
+    <div class="row" style="justify-content:flex-end;">
+      <button id="btnClose">關閉</button>
+      <button id="btnReload">重新開始</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  const elState = document.getElementById('state');
+  const elMapName = document.getElementById('mapName');
+  const elBallList = document.getElementById('balllist');
+  const elResultBody = document.getElementById('resultBody');
+
+  const hpRed = document.getElementById('hpRed');
+  const hpGreen = document.getElementById('hpGreen');
+  const hpBar = document.getElementById('hpbar');
+  const hpNum = document.getElementById('hpNum');
+
+  const camModeSel = document.getElementById('camMode');
+  const btnPause = document.getElementById('btnPause');
+  const btnReset = document.getElementById('btnReset');
+  const btnPreview = document.getElementById('btnPreview');
+
+  const overlay = document.getElementById('overlay');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalText = document.getElementById('modalText');
+  const btnClose = document.getElementById('btnClose');
+  const btnReload = document.getElementById('btnReload');
+
+  const zoomRange = document.getElementById('zoom');
+  const zoomLabel = document.getElementById('zoomLabel');
+
+  const betModeSel = document.getElementById('betMode');
+  const betModeLabel = document.getElementById('betModeLabel');
+  const betAmountLabel = document.getElementById('betAmountLabel');
+
+  // 世界尺寸（左右固定）
+  const WORLD_W = 1100;
+  const WORLD_H = 6500;
+
+  // 物理
+  const R = 12.5;
+  const g0 = 2500;          // 基礎重力
+  const VY0 = 110;
+
+  // 球能力（最新）
+  const RED_SPEED_MUL = 2.5;      // 紅球行動速度×2
+  const GREEN_SPEED_MUL = 1.0;
+  const MAX_SPEED_BASE = 960;
+
+  // 綠球減速光環：半徑內的其他球速度×0.5
+  const GREEN_AURA_DELAY = 0.5;      // 出發後延遲 0.5 秒
+  const GREEN_AURA_R = 210;
+  const GREEN_AURA_MUL = 0.2;
+  let greenAuraEnabled = false;   // 本局是否已啟動（每局要重置）
+
+
+  const SUBSTEP = 1/240;
+  const BASE_DRAG = 0.03;
+  const WALL_RESTITUTION = 0.92;
+
+  // 卡死回原點
+  const STUCK_T = 2.0;
+  const STUCK_DY = 12;
+  const STUCK_V = 60;
+
+  // HP / 押注
+  let hp = 100;
+  const LAST_PENALTY = 10;
+
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand = (a,b)=>a+Math.random()*(b-a);
+  const lerp = (a,b,t)=>a+(b-a)*t;
+
+  function mulberry32(seed){
+    return function(){
+      let t = seed += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // 反射定律
+  function reflect(vx, vy, nx, ny){
+    const dot = vx*nx + vy*ny;
+    return { vx: vx - 2*dot*nx, vy: vy - 2*dot*ny };
+  }
+
+  // === 解析度 / 旋轉自適應 ===
+  let VW = 1100, VH = 980;
+  function resizeCanvas(){
+    const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(320, Math.floor(rect.width));
+    const h = Math.max(420, Math.floor(rect.height));
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    VW = w; VH = h;
+
+    computeZoomBase();
+    clampCam();
+  }
+  window.addEventListener('resize', ()=> resizeCanvas());
+  window.addEventListener('orientationchange', ()=> setTimeout(resizeCanvas, 150));
+
+  // === Zoom：以完整寬度為基準，再放大檢視細節 ===
+  let zoomBase = 1.0;
+  let zoomFactor = 1.00;
+  function computeZoomBase(){
+    zoomBase = VW / WORLD_W;
+    zoomBase = Math.max(0.50, Math.min(1.25, zoomBase));
+  }
+  function getZoom(){ return zoomBase * zoomFactor; }
+  function setZoomFactor(f){
+    zoomFactor = clamp(f, 1.00, 2.20);
+    zoomRange.value = zoomFactor.toFixed(2);
+    zoomLabel.textContent = zoomFactor.toFixed(2) + "×";
+    clampCam();
+  }
+  zoomRange.addEventListener("input", ()=> setZoomFactor(Number(zoomRange.value)));
+
+  // === 鏡頭 + 慣性滑動 ===
+  let camX = 0, camY = 0;
+  let camMode = "auto";  // 預設跟隨下注球
+  let camDragging = false;
+  let camDragPointerId = null;
+
+  // 慣性（世界座標速度）
+  let inertiaVX = 0, inertiaVY = 0;
+  let inertiaOn = false;
+
+  const dragSamples = [];
+  const MAX_SAMPLES = 8;
+
+  function clampCam(){
+    const z = getZoom();
+    const vw = VW / z;
+    const vh = VH / z;
+    camX = clamp(camX, 0, Math.max(0, WORLD_W - vw));
+    camY = clamp(camY, 0, Math.max(0, WORLD_H - vh));
+  }
+
+  function centerOnStart(){
+    const z = getZoom();
+    const vw = VW / z, vh = VH / z;
+    camX = clamp(map.start.x - vw*0.50, 0, Math.max(0, WORLD_W - vw));
+    camY = clamp(map.start.y - 160, 0, Math.max(0, WORLD_H - vh));
+    clampCam();
+  }
+
+  function setCamMode(v){ camMode = v; camModeSel.value = v; }
+  camModeSel.addEventListener("change", ()=> setCamMode(camModeSel.value));
+
+  function updateCamera(dt){
+    if(camMode === "free"){
+      if(inertiaOn){
+        camX += inertiaVX * dt;
+        camY += inertiaVY * dt;
+        const damp = Math.pow(0.001, dt);
+        inertiaVX *= damp;
+        inertiaVY *= damp;
+        if(Math.hypot(inertiaVX, inertiaVY) < 8){
+          inertiaOn = false;
+          inertiaVX = inertiaVY = 0;
+        }
+        clampCam();
+      }
+      return;
+    }
+
+    // 跟隨下注球（未押注時，跟著紅球當作預設視角）
+    const chosen = balls.find(b=>b.id===chosenBallId) || balls.find(b=>b.id===0) || balls[0];
+    const z = getZoom();
+    const vw = VW / z, vh = VH / z;
+
+    const targetY = chosen ? chosen.y : map.start.y;
+    const targetX = chosen ? chosen.x : map.start.x;
+
+    const targetCamY = clamp(targetY - vh*0.35, 0, Math.max(0, WORLD_H - vh));
+    const targetCamX = clamp(targetX - vw*0.50, 0, Math.max(0, WORLD_W - vw));
+
+    camY = lerp(camY, targetCamY, 1 - Math.pow(0.001, dt));
+    camX = lerp(camX, targetCamX, 1 - Math.pow(0.001, dt));
+    clampCam();
+  }
+
+  // === UI ===
+  function setState(t){ elState.textContent = t; }
+  function showModal(title, html){
+    modalTitle.textContent = title;
+    modalText.innerHTML = html;
+    overlay.style.display = "grid";
+  }
+  btnClose.addEventListener("click", ()=> overlay.style.display="none");
+  overlay.addEventListener("click", (e)=>{ if(e.target===overlay) overlay.style.display="none"; });
+  btnReload.addEventListener("click", ()=> location.reload());
+
+  // 血條表示（符合指定）
+  // <=100：紅條 = hp%
+  // 100~200：左綠=(hp-100)%，右紅=(200-hp)%
+  // >=200：整條綠，數字照 hp
+function renderHP(){
+  const val = Math.max(0, hp);
+
+  let greenPct = 0, redPct = 0;
+
+  if(val <= 100){
+    // 紅條從左往右填滿 val%
+    greenPct = 0;
+    redPct = clamp(val, 0, 100);
+    hpNum.innerHTML = `<span class="red">${val.toFixed(1)}</span>`;
+
+    hpGreen.style.width = `0%`;
+
+    hpRed.style.left = `0%`;
+    hpRed.style.right = `auto`;
+    hpRed.style.width = `${redPct}%`;
+
+  }else if(val < 200){
+    // 左綠(超過100的部分) + 右紅(到200的剩餘)
+    greenPct = clamp(val - 100, 0, 100);
+    redPct = 100 - greenPct;
+    hpNum.innerHTML = `<span class="green">${val.toFixed(1)}</span>`;
+
+    hpGreen.style.left = `0%`;
+    hpGreen.style.width = `${greenPct}%`;
+
+    // 紅條接在綠條右邊，往右延伸 redPct%
+    hpRed.style.left = `${greenPct}%`;
+    hpRed.style.right = `auto`;
+    hpRed.style.width = `${redPct}%`;
+
+  }else{
+    // >=200：整條綠
+    greenPct = 100;
+    redPct = 0;
+    hpNum.innerHTML = `<span class="green">${val.toFixed(1)}</span>`;
+
+    hpGreen.style.left = `0%`;
+    hpGreen.style.width = `100%`;
+
+    hpRed.style.width = `0%`;
+    hpRed.style.left = `0%`;
+    hpRed.style.right = `auto`;
+  }
+}
+
+  // 球（最新描述）
+  const ballsDef = [
+    {id:0,name:"紅球",color:"rgba(255,80,110,.95)", ability:"快，還要更快",
+     desc:"行動速度加快；受到的場地效果全部加倍；且遇到的所有區域皆改成增益。"},
+    {id:1,name:"藍球",color:"rgba(80,170,255,.95)", ability:"我的代碼在你之上",
+     desc:"完全無視場地效果（特殊區域/風場/黑白洞/圈圈/機關/傳送/重力帶）。"},
+    {id:2,name:"綠球",color:"rgba(60,255,170,.95)", ability:"凍住，不許走！",
+     desc:`讓周圍一定距離內的其他球的速度減慢。`},
+    {id:3,name:"黃球",color:"rgba(255,210,80,.95)", ability:"天手力",
+     desc:"每次間隔隨機 2～8 秒，與另一顆球隨機交換位置。"},
+    {id:4,name:"紫球",color:"rgba(200,120,255,.95)", ability:"我很幸運",
+     desc:"有機率觸發短時間的超級加速"},
+  ];
+
+  // 賠率
+  let lastRank = null;
+  let odds = [2,2,2,2,2];
+  function updateOddsFromLastRank(){
+    if(!lastRank){ odds = odds.map(()=>2.0); return; }
+    const rankOf = new Array(5).fill(0);
+    lastRank.forEach((id, idx)=> rankOf[id]=idx+1);
+    odds = odds.map((_, id)=>{
+      const r = rankOf[id];
+      const target = 1.25 + r*0.60;
+      const jitter = rand(-0.08, 0.08);
+      return clamp(target + jitter, 1.40, 4.80);
+    });
+  }
+
+  let running=false, paused=false, betLocked=false, dead=false;
+  let chosenBallId = null;
+  let balls = [];
+  let raceStopped = false;
+
+  // 押注模式
+  const betModes = {
+    m1: {name:"你好，我吃一點", calc:(hp)=>20},
+    m2: {name:"這是一場豪賭，朋友", calc:(hp)=>Math.max(1, hp*0.5)},
+    m3: {name:"所有，或一無所有", calc:(hp)=>Math.max(0, hp-0.1)}, // 不造成立即死亡（留 0.1）
+  };
+  let betMode = "m1";
+  let currentBetAmount = 20;
+
+  function updateBetUI(){
+    betMode = betModeSel.value;
+    betModeLabel.textContent = betModes[betMode].name;
+    currentBetAmount = betModes[betMode].calc(Math.max(0, hp));
+    betAmountLabel.textContent = currentBetAmount.toFixed(1);
+  }
+  betModeSel.addEventListener("change", ()=>{
+    updateBetUI();
+    renderBallList();
+  });
+
+  function renderBallList(){
+    elBallList.innerHTML = "";
+    ballsDef.forEach(b=>{
+      const div = document.createElement("div");
+      div.className = "ball";
+      div.innerHTML = `
+        <div class="dot" style="background:${b.color}"></div>
+        <div>
+          <div class="titleRow">
+            <b>${b.name}</b>
+            <span class="tag">${b.ability}</span>
+          </div>
+          <div class="small">${b.desc}</div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px; padding-top:2px;">
+          <div class="small">賠率：<b>${odds[b.id].toFixed(2)}</b></div>
+          <button data-bet="${b.id}" ${running||betLocked||dead ? "disabled":""}>押注</button>
+        </div>
+      `;
+      elBallList.appendChild(div);
+    });
+
+    elBallList.querySelectorAll('button[data-bet]').forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = Number(btn.getAttribute("data-bet"));
+        applyBetAndStart(id);
+      });
+    });
+  }
+
+  function onDeath(msg){
+    dead = true;
+    running = false;
+    paused = false;
+    betLocked = true;
+    setState("死亡");
+    showModal("你死亡了", `${msg}<br/>按「重新開始」會重載頁面。`);
+  }
+
+  function resetBallToStart(b){
+    b.x = clamp(map.start.x + rand(-34,34), R+2, WORLD_W-R-2);
+    b.y = map.start.y + rand(-16,16);
+    b.vx = rand(-20,20);
+
+    const mul =
+      (b.id===0) ? RED_SPEED_MUL :
+      (b.id===2) ? GREEN_SPEED_MUL : 1.0;
+
+    b.vy = (VY0 * mul) + rand(-8,8);
+
+    b.ringCooldown = 0;
+    b.teleCooldown = 0;
+    b.lowGTimer = 0;
+
+    b.freezeTimer = 0;
+    b.whiteCooldown = 0;
+
+    b.blackKickVX = 0;
+    b.blackKickVY = 0;
+
+    b.yellowJumpT = 0;
+    b.yellowNextJump = rand(2.0, 8.0);
+
+    b.purpleCheckT = 0;
+    b.purpleBoostT = 0;
+
+    b.stuckT = 0;
+    b.stuckY0 = b.y;
+
+    b.greenAuraTimer = 0;
+    b.greenAuraActive = false;
+  }
+
+  function initBalls(){
+    balls = ballsDef.map(d=>{
+      const obj = {
+        id:d.id, name:d.name, color:d.color,
+        x:0,y:0,vx:0,vy:0,
+        ringCooldown:0, teleCooldown:0, lowGTimer:0,
+        freezeTimer:0, whiteCooldown:0,
+        blackKickVX:0, blackKickVY:0,
+        yellowJumpT:0, yellowNextJump: rand(3.0,10.0),
+        purpleCheckT:0, purpleBoostT:0,
+        stuckT:0, stuckY0:0,
+      };
+      resetBallToStart(obj);
+      return obj;
+    });
+    raceStopped = false;
+  }
+
+  // === 地圖：7 個 ===
+  const mapDefs = [
+    { key:"WindyRails",  name:"WindyRails",     p:{ wind:25, black:5,  white:5,  moveBars:10, rotBars:10, stickyBars:9, slideBars:9, rings:20, zones:32, triggers:60 } },
+    { key:"BlackTrap",   name:"BlackTrap",             p:{ wind:8,  black:20, white:10,  moveBars:10, rotBars:5,  stickyBars:13, slideBars:9, rings:20, zones:25, triggers:65 } },
+    { key:"WhiteLeap",   name:"WhiteLeap",             p:{ wind:8,  black:10,  white:25, moveBars:20, rotBars:20,  stickyBars:13, slideBars:9, rings:20, zones:25, triggers:65 } },
+    { key:"GyroDance",   name:"GyroDance",            p:{ wind:15, black:8,  white:8,  moveBars:10, rotBars:25, stickyBars:13, slideBars:9, rings:16, zones:25, triggers:55 } },
+    { key:"MovingLanes", name:"MovingLanes",          p:{ wind:15, black:8,  white:8,  moveBars:25, rotBars:10,  stickyBars:13, slideBars:9, rings:16, zones:25, triggers:55 } },
+    { key:"StickySlide", name:"StickySlide",          p:{ wind:6,  black:5,  white:5,  moveBars:10, rotBars:10,  stickyBars:18, slideBars:25,rings:16, zones:25, triggers:45 } },
+    { key:"CleanChaos",  name:"CleanChaos",         p:{ wind:15, black:12,  white:12,  moveBars:20, rotBars:20, stickyBars:20, slideBars:20,rings:40, zones:30, triggers:60 } },
+  ];
+
+  let mapPool = [];
+  let map = null;
+
+  function refillMapPool(){
+    mapPool = mapDefs.map(m=>m.key);
+    for(let i=mapPool.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [mapPool[i], mapPool[j]] = [mapPool[j], mapPool[i]];
+    }
+  }
+  function nextRandomMap(){
+    if(mapPool.length===0) refillMapPool();
+    const key = mapPool.pop();
+    const def = mapDefs.find(m=>m.key===key);
+    const seed = Math.floor(Math.random()*1e9);
+    map = buildMap(def, seed);
+    elMapName.textContent = map.name;
+  }
+
+  // === 碰撞工具 ===
+  function aabbOverlap(a,b){
+    return !(a.x+a.w < b.x || b.x+b.w < a.x || a.y+a.h < b.y || b.y+b.h < a.y);
+  }
+  function circleAABB(cx, cy, r, rect){
+    const closestX = clamp(cx, rect.x, rect.x + rect.w);
+    const closestY = clamp(cy, rect.y, rect.y + rect.h);
+    const dx = cx - closestX, dy = cy - closestY;
+    if(dx*dx + dy*dy > r*r) return null;
+
+    const leftPen  = (cx + r) - rect.x;
+    const rightPen = (rect.x + rect.w) - (cx - r);
+    const topPen   = (cy + r) - rect.y;
+    const botPen   = (rect.y + rect.h) - (cy - r);
+
+    const pens = [
+      {nx:-1, ny:0, pen:leftPen},
+      {nx: 1, ny:0, pen:rightPen},
+      {nx:0, ny:-1, pen:topPen},
+      {nx:0, ny: 1, pen:botPen},
+    ].filter(p => p.pen >= 0).sort((a,b)=>a.pen-b.pen);
+
+    return pens[0] || {nx:0, ny:-1, pen:1};
+  }
+  function circleSegmentHit(cx, cy, r, seg){
+    const x1=seg.x1, y1=seg.y1, x2=seg.x2, y2=seg.y2;
+    const vx = x2-x1, vy = y2-y1;
+    const len2 = vx*vx + vy*vy;
+    if(len2 <= 1e-9) return null;
+
+    let t = ((cx-x1)*vx + (cy-y1)*vy) / len2;
+    t = clamp(t, 0, 1);
+    const px = x1 + t*vx;
+    const py = y1 + t*vy;
+
+    const dx = cx - px;
+    const dy = cy - py;
+
+    const thickR = r + seg.thick*0.5;
+    const d2 = dx*dx + dy*dy;
+    if(d2 > thickR*thickR) return null;
+
+    const d = Math.sqrt(d2) || 1;
+    return { nx: dx/d, ny: dy/d, pen: (thickR - d), px, py, t };
+  }
+  function segAABB(seg){
+    const minx = Math.min(seg.x1, seg.x2), maxx = Math.max(seg.x1, seg.x2);
+    const miny = Math.min(seg.y1, seg.y2), maxy = Math.max(seg.y1, seg.y2);
+    const pad = seg.thick*0.7 + 10;
+    return {x:minx-pad, y:miny-pad, w:(maxx-minx)+2*pad, h:(maxy-miny)+2*pad};
+  }
+  function pointInRotRect(px, py, rr){
+    const s = Math.sin(-rr.ang), c = Math.cos(-rr.ang);
+    const dx = px - rr.cx, dy = py - rr.cy;
+    const lx = dx*c - dy*s;
+    const ly = dx*s + dy*c;
+    return (Math.abs(lx) <= rr.hw && Math.abs(ly) <= rr.hh);
+  }
+
+  // 球-球彈性碰撞
+  function resolveBallBallElastic(a, b){
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist2 = dx*dx + dy*dy;
+    const minD = 2*R;
+    if(dist2 >= minD*minD || dist2 === 0) return;
+
+    const dist = Math.sqrt(dist2);
+    const nx = dx / dist, ny = dy / dist;
+    const overlap = (minD - dist);
+    a.x -= nx * overlap * 0.5;
+    a.y -= ny * overlap * 0.5;
+    b.x += nx * overlap * 0.5;
+    b.y += ny * overlap * 0.5;
+
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const relAlongN = rvx*nx + rvy*ny;
+    if(relAlongN > 0) return;
+
+    const j = -relAlongN;
+    a.vx -= j * nx; a.vy -= j * ny;
+    b.vx += j * nx; b.vy += j * ny;
+  }
+
+  // === 建模 ===
+  function buildMap(def, seed){
+    const rnd = mulberry32(seed);
+
+    const start = { x: WORLD_W*0.50, y: 110 };
+    const finish = { x: WORLD_W*0.50, y: WORLD_H-160, w: WORLD_W, h: 14 };
+
+    const obstaclesRect = [];
+    const segsStatic = [];
+    const segsSticky = [];
+    const segsSlide = [];
+    const movingBars = [];
+    const rotatingBars = [];
+    const rotatingArcs = [];
+    const zonesRect = [];
+    const rings = [];
+    const triggers = [];
+    const windFields = [];
+    const blackHoles = [];
+    const whiteHoles = [];
+
+    // 外牆
+    const T = 30;
+    obstaclesRect.push({x:-T, y:-T, w:T, h:WORLD_H+2*T});
+    obstaclesRect.push({x:WORLD_W, y:-T, w:T, h:WORLD_H+2*T});
+    obstaclesRect.push({x:-T, y:-T, w:WORLD_W+2*T, h:T});
+    obstaclesRect.push({x:-T, y:WORLD_H, w:WORLD_W+2*T, h:T});
+
+    const SEG = 260;
+    const nSeg = Math.floor((WORLD_H-420)/SEG);
+    let corridorX = WORLD_W*0.5;
+
+    function tryAddZoneRect(z){
+      for(const a of zonesRect) if(aabbOverlap(a,z)) return false;
+      zonesRect.push(z); return true;
+    }
+    function tryAddRing(rg){
+      for(const r of rings){
+        const dx = r.x - rg.x, dy = r.y - rg.y;
+        const minD = (r.r + rg.r) + 28;
+        if(dx*dx + dy*dy < minD*minD) return false;
+      }
+      if(rg.x < 70 || rg.x > WORLD_W-70) return false;
+      rings.push(rg); return true;
+    }
+    function tryAddHole(arr, h){
+      for(const o of arr){
+        const dx=o.x-h.x, dy=o.y-h.y;
+        const min=(o.r+h.r)+40;
+        if(dx*dx+dy*dy<min*min) return false;
+      }
+      arr.push(h); return true;
+    }
+    function tryAddWind(wf){
+      for(const w of windFields){
+        const dx = w.cx - wf.cx, dy = w.cy - wf.cy;
+        if(dx*dx + dy*dy < 220*220) return false;
+      }
+      windFields.push(wf); return true;
+    }
+
+    function addSeg(arr, cx, cy, len, angleRad, thick, extra={}){
+      const hx = Math.cos(angleRad) * (len/2);
+      const hy = Math.sin(angleRad) * (len/2);
+      const seg = { x1: cx - hx, y1: cy - hy, x2: cx + hx, y2: cy + hy, thick, ...extra };
+
+      const aabb = segAABB(seg);
+      const corridor = {x: corridorX-82, y: cy-180, w:164, h:360};
+      if(aabbOverlap(aabb, corridor)) return false;
+
+      const all = [...segsStatic, ...segsSticky, ...segsSlide];
+      for(const s of all){
+        if(aabbOverlap(aabb, segAABB(s))) return false;
+      }
+      arr.push(seg);
+      return true;
+    }
+
+    for(let i=0;i<nSeg;i++){
+      const y = 250 + i*SEG;
+
+      corridorX = lerp(corridorX, WORLD_W*(0.18 + 0.64*rnd()), 0.22);
+      corridorX = clamp(corridorX, 200, WORLD_W-200);
+
+      const thick = 12.5;
+
+      // 兩側導流
+      {
+        const sideLen = 240 + rnd()*120;
+        addSeg(segsStatic, 120 + rnd()*55, y + 92, sideLen,  (0.78 + rnd()*0.22), thick);
+        addSeg(segsStatic, WORLD_W-(120 + rnd()*55), y + 92, sideLen, (-0.78 - rnd()*0.22), thick);
+      }
+
+      // 中段混亂
+      const midCount = 6 + (rnd()<0.55 ? 1 : 0);
+      const specialsHere = (rnd()<0.70) ? 3 : 2;
+      let upgraded = 0;
+
+      for(let k=0;k<midCount;k++){
+        const len = 230 + rnd()*300;
+        const cx = clamp(corridorX + (rnd()-0.5)*780, 180, WORLD_W-180);
+        const cy = y + 80 + rnd()*210;
+        const angle = (rnd()<0.5 ? 1 : -1) * (0.30 + rnd()*0.70);
+
+        const ok = addSeg(segsStatic, cx, cy, len, angle, thick);
+        if(ok && upgraded < specialsHere && rnd()<0.62){
+          const seg = segsStatic.pop();
+          const pick = rnd();
+          if(pick < 0.60 && segsSticky.length < def.p.stickyBars){
+            seg.sticky = true;
+            seg.thick = 13.0;
+            segsSticky.push(seg);
+          }else if(segsSlide.length < def.p.slideBars){
+            seg.slide = true;
+            seg.thick = 12.5;
+            segsSlide.push(seg);
+          }else{
+            segsStatic.push(seg);
+          }
+          upgraded++;
+        }
+      }
+
+      // zones：加入重力帶（gravity）
+      if(zonesRect.length < def.p.zones && rnd() < 0.82){
+        const t = rnd();
+        const type = (t<0.20) ? "boost" :
+                     (t<0.44) ? "mud"   :
+                     (t<0.62) ? "brake" :
+                     (t<0.76) ? "sticky":
+                     (t<0.88) ? "bounce": "gravity";
+        const w = 260 + rnd()*420;
+        const h = 135;
+        const x = clamp(40 + rnd()*(WORLD_W-80-w), 20, WORLD_W-20-w);
+        const z = {type, x, y:y+40, w, h};
+        const corridor = {x: corridorX-70, y: y+30, w:140, h:240};
+        if(!aabbOverlap(z, corridor) || rnd()<0.45) tryAddZoneRect(z);
+      }
+
+      // rings
+      if(rings.length < def.p.rings){
+        const ringCount = 3 + (rnd()<0.35 ? 1 : 0);
+        for(let kk=0; kk<ringCount && rings.length<def.p.rings; kk++){
+          const t = rnd();
+          const type =
+            (t<0.30) ? "boostRing" :
+            (t<0.56) ? "slowRing"  :
+            (t<0.76) ? "kickRing"  :
+            (t<0.92) ? "lowGRing"  : "teleRing";
+          const r = 26 + rnd()*10;
+          const x = clamp(corridorX + (rnd()-0.5)*720, 70, WORLD_W-70);
+          const yy = y + 60 + rnd()*210;
+
+          if(type==="teleRing"){
+            if(i % 8 !== 3) continue;
+            const pairId = Math.floor(rnd()*1e6);
+            const x2 = clamp(WORLD_W - x + (rnd()-0.5)*260, 70, WORLD_W-70);
+            const y2 = clamp(yy + 760 + rnd()*860, 340, WORLD_H-520);
+            tryAddRing({type:"teleRing", pairId, x, y:yy, r});
+            tryAddRing({type:"teleRing", pairId, x:x2, y:y2, r});
+          }else{
+            tryAddRing({type, x, y:yy, r});
+          }
+        }
+      }
+
+      // triggers
+      while(triggers.length < def.p.triggers && rnd() < 0.78){
+        const t = rnd();
+        const type =
+          (t<0.26) ? "burstDown" :
+          (t<0.50) ? "brakeTrig" :
+          (t<0.70) ? "sideKick"  :
+          (t<0.88) ? "swap"      : "chaos";
+        const r = 22 + rnd()*10;
+        const x = clamp(corridorX + (rnd()-0.5)*780, 80, WORLD_W-80);
+        const yy = y + 60 + rnd()*210;
+        triggers.push({type, x, y:yy, r, cooldown: 0});
+      }
+    }
+
+    // 終點前反增益帶
+    tryAddZoneRect({type:"mud", x:0, y:WORLD_H-600, w:WORLD_W, h:240});
+
+    // 風場
+    for(let i=0;i<def.p.wind;i++){
+      const cx = WORLD_W*0.50 + (rnd()-0.5)*260;
+      const cy = 520 + rnd()*(WORLD_H-1200);
+      const pick = rnd();
+      const ang =
+        (pick<0.18) ? 0 :
+        (pick<0.32) ? Math.PI/2 :
+        (pick<0.66) ? (rnd()<0.5 ? 1 : -1) * (0.35 + rnd()*0.65) :
+                      (rnd()<0.5 ? 1 : -1) * (0.85 + rnd()*0.45);
+      const hw = 640 + rnd()*520;
+      const hh = 55 + rnd()*55;
+      const strength = 2200 + rnd()*2200;
+      const dir = (rnd()<0.5 ? -1 : 1);
+      tryAddWind({cx, cy, hw, hh, ang, strength, dir});
+    }
+
+    // 黑洞/白洞
+    for(let i=0;i<def.p.black;i++){
+      const x = 110 + rnd()*(WORLD_W-220);
+      const y = 600 + rnd()*(WORLD_H-1400);
+      tryAddHole(blackHoles, {x,y,r:12.0});
+    }
+    for(let i=0;i<def.p.white;i++){
+      const x = 110 + rnd()*(WORLD_W-220);
+      const y = 600 + rnd()*(WORLD_H-1400);
+      tryAddHole(whiteHoles, {x,y,r:15});
+    }
+
+    // 移動桿
+    for(let i=0;i<def.p.moveBars;i++){
+      const cx = 150 + rnd()*(WORLD_W-300);
+      const cy = 540 + rnd()*(WORLD_H-1500);
+      const len = 130 + rnd()*140;
+      const thick = 11.5;
+      const angle = (rnd()<0.22 ? 0 : (rnd()<0.62 ? (0.62+rnd()*0.34) : (-0.62-rnd()*0.34)));
+      const dirAngle = (rnd()<0.5 ? 0 : Math.PI) + (rnd()-0.5)*0.70;
+      const amp = 140 + rnd()*230;
+      const speed = 0.55 + rnd()*1.05;
+      movingBars.push({cx,cy,len,thick,angle,dirAngle,amp,speed,phase:rnd()*Math.PI*2});
+    }
+
+    // 旋轉桿/弧門
+    for(let i=0;i<def.p.rotBars;i++){
+      const cx = 170 + rnd()*(WORLD_W-340);
+      const cy = 580 + rnd()*(WORLD_H-1600);
+      const len = 150 + rnd()*180;
+      const thick = 11.5;
+      const baseAngle = (rnd()-0.5)*1.4;
+      const omega = (rnd()<0.5 ? -1 : 1) * (0.95 + rnd()*1.85);
+      rotatingBars.push({cx,cy,len,thick,angle:baseAngle,omega});
+      if(rnd()<0.55){
+        const rr = 66 + rnd()*70;
+        const omega2 = (rnd()<0.5 ? -1 : 1) * (0.80 + rnd()*1.35);
+        rotatingArcs.push({cx,cy,rr,angle:baseAngle,omega:omega2, thick:10.5});
+      }
+    }
+
+    return {
+      name:def.name, key:def.key, seed,
+      start, finish,
+      obstaclesRect, segsStatic, segsSticky, segsSlide,
+      movingBars, rotatingBars, rotatingArcs,
+      zonesRect, rings, triggers, windFields, blackHoles, whiteHoles,
+    };
+  }
+
+  function remainingDistToFinish(ball){
+    return Math.max(0, (map.finish.y - ball.y));
+  }
+
+  function settleByDistance(){
+    const ranking = [...balls].sort((a,b)=> remainingDistToFinish(a) - remainingDistToFinish(b));
+    lastRank = ranking.map(b=>b.id);
+
+    const place = ranking.findIndex(b=>b.id===chosenBallId) + 1;
+
+    const mult = (place===1) ? 1.00 : (place===2) ? 0.50 : 0.0;
+
+    let ret = 0;
+    if(place<=2){
+      ret = currentBetAmount * odds[chosenBallId] * mult;
+    }else if(place===5){
+      ret = -LAST_PENALTY;
+    }else{
+      ret = 0;
+    }
+
+    hp += ret;
+    renderHP();
+    updateBetUI();
+
+    elResultBody.innerHTML = "";
+    ranking.forEach((b, idx)=>{
+      const p = idx+1;
+      const isChosen = b.id===chosenBallId;
+      const d = remainingDistToFinish(b);
+      const rowDelta = isChosen ? (ret>=0 ? `+${ret.toFixed(1)}` : `${ret.toFixed(1)}`) : "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><b>${p}</b></td>
+        <td>${isChosen?"👉 ":""}<span style="display:inline-flex;align-items:center;gap:8px;">
+          <span class="dot" style="background:${b.color}"></span>${b.name}
+        </span></td>
+        <td>${d.toFixed(0)} px</td>
+        <td>${isChosen ? `<b style="color:${ret>=0 ? "rgba(60,255,170,.98)" : "rgba(255,90,110,.98)"}">${rowDelta}</b>` : ""}</td>
+      `;
+      elResultBody.appendChild(tr);
+    });
+
+    const winner = ranking[0];
+    showModal("本局結算（距離排名）", `
+      冠軍：<b>${ballsDef[winner.id].name}</b>（到達終點）<br/>
+      你押注：<b>${ballsDef[chosenBallId].name}</b>（第 <b>${place}</b> 名）<br/>
+      押注：<b>${currentBetAmount.toFixed(1)}</b>｜變動：<b>${ret>=0?"+":""}${ret.toFixed(1)}</b>｜賠率 ${odds[chosenBallId].toFixed(2)}<br/>
+      目前 HP：<b>${Math.max(0,hp).toFixed(1)}</b>
+    `);
+
+    updateOddsFromLastRank();
+
+    running = false;
+    paused = false;
+    betLocked = false;
+    setState("檢視地圖");
+
+    chosenBallId = null;
+    renderBallList();
+
+    if(hp <= 0){ onDeath("本局結算後 HP ≤ 0。"); return; }
+
+    nextRandomMap();
+    initBalls();
+    centerOnStart();
+    setCamMode("auto");
+  }
+
+  // 押注：先選模式，再選球
+  function applyBetAndStart(ballId){
+    if(dead || running || paused || betLocked) return;
+    if(hp <= 0){ onDeath("HP 已為 0。"); return; }
+
+    updateBetUI();
+    chosenBallId = ballId;
+
+    const bet = betModes[betMode].calc(hp);
+    currentBetAmount = bet;
+
+    hp -= bet;
+    renderHP();
+    updateBetUI();
+
+    if(hp <= 0){
+      // m3 保證不會立即死亡；其他模式允許
+      if(betMode === "m3"){
+        hp = 0.1;
+        renderHP();
+        updateBetUI();
+      }else{
+        onDeath("你已死亡（押注後 HP ≤ 0）。");
+        return;
+      }
+    }
+
+    canvas.scrollIntoView({behavior:"smooth", block:"start"});
+
+    betLocked = true;
+    running = true;
+    paused = false;
+    raceStopped = false;
+    setState("進行中");
+    setCamMode("auto");
+  }
+
+  // === 場地效果 ===
+  function inRect(x,y,r){ return x>=r.x && x<=r.x+r.w && y>=r.y && y<=r.y+r.h; }
+
+  function zoneEffects(ball){
+    // 藍球：完全無視場地（含重力帶）
+    if(ball.id === 1) return { dragAdd:0, boostMul:1.0, restMul:1.0, bounceMul:1.0, brakeMul:1.0, slideMul:1.0, gMul:1.0 };
+
+    let dragAdd = 0, boostMul = 1.0, restMul = 1.0, bounceMul = 1.0, brakeMul = 1.0, slideMul = 1.0, gMul = 1.0;
+    let inBoost = false, inAnti = false;
+
+    for(const z of map.zonesRect){
+      if(!inRect(ball.x, ball.y, z)) continue;
+
+      if(z.type==="boost"){  inBoost=true; boostMul *= 1.30; }
+      if(z.type==="bounce"){ inBoost=true; bounceMul *= 1.42; }
+      if(z.type==="mud"){    inAnti=true;  dragAdd += 4.6; }
+      if(z.type==="brake"){  inAnti=true;  brakeMul *= 0.60; }
+      if(z.type==="sticky"){ inAnti=true;  restMul *= 0.50; slideMul *= 0.90; }
+      if(z.type==="gravity"){ inAnti=true; gMul *= 1.55; } // 重力帶（更快下落）
+    }
+
+    const dblMul = (m)=> 1 + 2*(m-1);
+
+    // 紅球：場地效果加倍；反增益 → 加倍增益（包含重力帶）
+    if(ball.id === 0){
+      if(inAnti){
+        dragAdd = 0;
+        brakeMul = 1.0;
+        restMul  = 1.0;
+        slideMul = 1.0;
+        gMul = 1.0;
+
+        boostMul *= 1.45;
+        bounceMul *= 1.25;
+      }
+
+      dragAdd *= 2;
+      boostMul = dblMul(boostMul);
+      bounceMul = dblMul(bounceMul);
+      brakeMul = dblMul(brakeMul);
+      restMul  = dblMul(restMul);
+      slideMul = dblMul(slideMul);
+      gMul     = dblMul(gMul);
+    }
+
+    // 綠球：本次改為「減速力場」；不做場地加倍/反轉（依需求已移除）
+    return { dragAdd, boostMul, restMul, bounceMul, brakeMul, slideMul, gMul };
+  }
+
+  // 風場
+  function applyWind(ball, dt){
+    if(ball.id === 1) return; // 藍球忽視風場
+    for(const wf of map.windFields){
+      if(!pointInRotRect(ball.x, ball.y, wf)) continue;
+      const fx = Math.cos(wf.ang) * wf.strength * wf.dir;
+      const fy = Math.sin(wf.ang) * wf.strength * wf.dir;
+      ball.vx += fx * dt;
+      ball.vy += (fy + 0.18*wf.strength) * dt;
+    }
+  }
+
+  function applyBlackWhiteHoles(ball){
+    if(ball.id === 1) return; // 藍球忽視黑白洞
+    if(ball.freezeTimer > 0) return;
+
+    // 黑洞
+    for(const h of map.blackHoles){
+      const dx = ball.x - h.x, dy = ball.y - h.y;
+      const rr = (h.r + R);
+      if(dx*dx + dy*dy <= rr*rr){
+        ball.freezeTimer = 1.5;
+        ball.vx = 0; ball.vy = 0;
+
+        const d = Math.hypot(dx,dy);
+        let nx = (d>1e-6) ? dx/d : (Math.random()<0.5?1:-1);
+        let ny = (d>1e-6) ? dy/d : -1;
+        ny = ny*0.5 + 0.5;
+        const nd = Math.hypot(nx,ny) || 1;
+        nx/=nd; ny/=nd;
+
+        ball.blackKickVX = nx * 520;
+        ball.blackKickVY = ny * 620;
+
+        ball.x = clamp(h.x + nx*(h.r+R+10), R+2, WORLD_W-R-2);
+        ball.y = clamp(h.y + ny*(h.r+R+10), map.start.y, map.finish.y - 220);
+        return;
+      }
+    }
+
+    // 白洞
+    if(ball.whiteCooldown <= 0){
+      for(const w of map.whiteHoles){
+        const dx = ball.x - w.x, dy = ball.y - w.y;
+        const rr = (w.r + R);
+        if(dx*dx + dy*dy <= rr*rr){
+          const ang = Math.random()*Math.PI*2;
+          const dist = 600 + Math.random()*360;
+          ball.x = clamp(w.x + Math.cos(ang)*dist, R+2, WORLD_W-R-2);
+          ball.y = clamp(w.y + Math.sin(ang)*dist, map.start.y, map.finish.y - 240);
+          ball.vx *= 0.40;
+          ball.vy = Math.max(70, ball.vy*0.50);
+          ball.whiteCooldown = 1.6;
+          break;
+        }
+      }
+    }
+  }
+
+  function applyRings(ball, dt){
+    if(ball.id === 1) return; // 藍球不受圈圈（含傳送）影響
+    ball.ringCooldown = Math.max(0, ball.ringCooldown - dt);
+    ball.teleCooldown = Math.max(0, ball.teleCooldown - dt);
+    ball.lowGTimer = Math.max(0, ball.lowGTimer - dt);
+    if(ball.ringCooldown > 0) return;
+
+    for(const rg of map.rings){
+      const dx = ball.x - rg.x;
+      const dy = ball.y - rg.y;
+      const rr = (rg.r + R);
+      if(dx*dx + dy*dy > rr*rr) continue;
+
+      if(rg.type==="boostRing"){ ball.vx *= 1.50; ball.vy *= 1.50; }
+      else if(rg.type==="slowRing"){  ball.vx *= 0.54; ball.vy *= 0.54; }
+      else if(rg.type==="kickRing"){  ball.vx += (Math.random()<0.5 ? -420 : 420); }
+      else if(rg.type==="lowGRing"){  ball.lowGTimer = 1.70; }
+      else if(rg.type==="teleRing"){
+        if(ball.teleCooldown > 0) continue;
+        const pair = map.rings.filter(r => r.type==="teleRing" && r.pairId === rg.pairId);
+        if(pair.length===2){
+          const other = (pair[0] === rg) ? pair[1] : pair[0];
+          ball.x = clamp(other.x + (Math.random()-0.5)*44, R+2, WORLD_W-R-2);
+          ball.y = other.y + 44;
+          ball.teleCooldown = 1.2;
+          ball.ringCooldown = 0.30;
+          return;
+        }
+      }
+
+      ball.ringCooldown = 0.26;
+      break;
+    }
+  }
+
+  function applyTriggers(ball, dt, balls){
+    if(ball.id === 1) return;
+    for(const tg of map.triggers){
+      tg.cooldown = Math.max(0, tg.cooldown - dt);
+      if(tg.cooldown > 0) continue;
+
+      const dx = ball.x - tg.x;
+      const dy = ball.y - tg.y;
+      const rr = tg.r + R;
+      if(dx*dx + dy*dy > rr*rr) continue;
+
+      const p =
+        (tg.type==="swap") ? 0.26 :
+        (tg.type==="brakeTrig") ? 0.48 :
+        (tg.type==="burstDown") ? 0.52 :
+        (tg.type==="sideKick") ? 0.48 : 0.42;
+      if(Math.random() > p) continue;
+
+      if(tg.type==="burstDown"){ ball.vy += 480; }
+      else if(tg.type==="brakeTrig"){ ball.vx *= 0.40; ball.vy *= 0.50; }
+      else if(tg.type==="sideKick"){ ball.vx += 520 * (Math.random()<0.5 ? -1 : 1); }
+      else if(tg.type==="swap"){
+        const other = balls[Math.floor(Math.random()*balls.length)];
+        if(other && other !== ball){
+          const tx = ball.x, ty = ball.y;
+          ball.x = other.x; ball.y = other.y - 70;
+          other.x = tx; other.y = ty - 70;
+        }
+      }else if(tg.type==="chaos"){
+        ball.vx += (Math.random()-0.5)*620;
+        ball.vy *= 1.12;
+      }
+
+      tg.cooldown = 1.0 + Math.random()*0.9;
+    }
+  }
+
+  function antiStuckNudge(ball){
+    const sp = Math.hypot(ball.vx, ball.vy);
+    if(sp < 28) ball.vy = Math.max(ball.vy, 115);
+  }
+
+  // 動態桿
+  function evalMovingSeg(bar, time){
+    const t = (time*bar.speed + bar.phase);
+    const s = Math.sin(t);
+    const dx = Math.cos(bar.dirAngle) * bar.amp * s;
+    const dy = Math.sin(bar.dirAngle) * bar.amp * s;
+    const cx = bar.cx + dx;
+    const cy = bar.cy + dy;
+    const angle = bar.angle;
+    const hx = Math.cos(angle) * (bar.len/2);
+    const hy = Math.sin(angle) * (bar.len/2);
+    return { x1: cx-hx, y1: cy-hy, x2: cx+hx, y2: cy+hy, thick: bar.thick, moving:true, kind:"moving" };
+  }
+  function evalRotSeg(bar, time){
+    const ang = bar.angle + bar.omega*time;
+    const hx = Math.cos(ang) * (bar.len/2);
+    const hy = Math.sin(ang) * (bar.len/2);
+    return { x1: bar.cx-hx, y1: bar.cy-hy, x2: bar.cx+hx, y2: bar.cy+hy, thick: bar.thick, rotating:true, kind:"rot" };
+  }
+  function arcHit(ball, arc, time){
+    const ang0 = arc.angle + arc.omega*time;
+    const dx = ball.x - arc.cx;
+    const dy = ball.y - arc.cy;
+    const d = Math.hypot(dx,dy);
+    const r0 = arc.rr;
+    const band = (arc.thick*0.5 + R);
+    if(Math.abs(d - r0) > band) return null;
+
+    let a = Math.atan2(dy,dx);
+    const norm = (x)=>{ while(x<0)x+=Math.PI*2; while(x>=Math.PI*2)x-=Math.PI*2; return x; }
+    const aa = norm(a);
+    const s = norm(ang0);
+    const e = norm(ang0 + Math.PI);
+    const inHalf = (s<e) ? (aa>=s && aa<=e) : (aa>=s || aa<=e);
+    if(!inHalf) return null;
+
+    const nx = (d===0)?1:(dx/d);
+    const ny = (d===0)?0:(dy/d);
+    const pen = band - Math.abs(d - r0);
+    return {nx,ny,pen, arc:true};
+  }
+
+  // 紫球
+  const PURPLE_CHECK_PERIOD = 0.5;
+  const PURPLE_TRIGGER_P = 0.5;
+  const PURPLE_BOOST_DUR = 0.5;
+  const PURPLE_BOOST_MUL = 5.0;
+
+  // 黏性桿：停球並沿桿滾下
+  function applyStickyRoll(ball, seg, eff){
+    const tx = seg.x2 - seg.x1;
+    const ty = seg.y2 - seg.y1;
+    const tl = Math.hypot(tx,ty) || 1;
+    let ux = tx/tl, uy = ty/tl;
+    if(uy < 0){ ux = -ux; uy = -uy; }
+
+    const along = (ball.vx*ux + ball.vy*uy) * 0.35;
+    ball.vx = ux * along * (0.85 * eff.slideMul);
+    ball.vy = uy * along * (0.85 * eff.slideMul) + 180;
+  }
+
+  
+  function applySlideResponse(ball, seg, eff){
+    const tx = seg.x2 - seg.x1;
+    const ty = seg.y2 - seg.y1;
+    const tl = Math.hypot(tx,ty) || 1;
+    let ux = tx/tl, uy = ty/tl;
+    if(uy < 0){ ux = -ux; uy = -uy; }
+    const v = ball.vx*ux + ball.vy*uy;
+    const slideMul = 0.98 * eff.slideMul;
+    ball.vx = ux * v * slideMul;
+    ball.vy = uy * v * slideMul + 120;
+  }
+
+  // 綠球減速光環：在每個 substep 開頭套用（只影響其他球）
+  function applyGreenAura(h){
+    const gball = balls.find(b=>b.id===2);
+    if(!gball) return;
+    const rr = GREEN_AURA_R;
+    const rr2 = rr*rr;
+
+    if(!gball.greenAuraActive){
+      gball.greenAuraTimer += h;
+      if(gball.greenAuraTimer < GREEN_AURA_DELAY) return;
+      gball.greenAuraActive = true;
+    }
+
+    for(const b of balls){
+      if(b.id === 2) continue;
+
+      const dx = b.x - gball.x;
+      const dy = b.y - gball.y;
+      if(dx*dx + dy*dy <= rr2){
+        b.vx *= GREEN_AURA_MUL;
+        b.vy *= GREEN_AURA_MUL;
+      }
+    }
+  }
+
+  let globalTime = 0;
+
+  function physicsStep(dt){
+    globalTime += dt;
+    let remaining = dt;
+
+    while(remaining > 1e-9){
+      const h = Math.min(SUBSTEP, remaining);
+      remaining -= h;
+
+      // 綠球光環（先減速其他球，再跑本步）
+      applyGreenAura(h);
+
+      const dynSegs = [];
+      for(const mb of map.movingBars) dynSegs.push(evalMovingSeg(mb, globalTime));
+      for(const rb of map.rotatingBars) dynSegs.push(evalRotSeg(rb, globalTime));
+
+      for(const b of balls){
+        if(raceStopped) break;
+
+        b.whiteCooldown = Math.max(0, b.whiteCooldown - h);
+
+        // 黑洞釘住 + 釋放彈走
+        if(b.freezeTimer > 0){
+          b.freezeTimer = Math.max(0, b.freezeTimer - h);
+          b.vx = 0; b.vy = 0;
+          if(b.freezeTimer <= 0){
+            b.vx = b.blackKickVX;
+            b.vy = b.blackKickVY;
+          }
+          continue;
+        }
+
+        // 黃球：隨機交換位置（3~10 秒）
+        if(b.id === 3){
+          b.yellowJumpT += h;
+          if(b.yellowJumpT >= b.yellowNextJump){
+            b.yellowJumpT = 0;
+            b.yellowNextJump = rand(2.0, 8.0);
+
+            const candidates = balls.filter(x => x.id !== b.id);
+            const other = candidates[Math.floor(Math.random()*candidates.length)];
+            if(other){
+              const tx=b.x, ty=b.y;
+              b.x = other.x; b.y = other.y;
+              other.x = tx; other.y = ty;
+
+              // 交換後稍微穩定（避免瞬間爆速）
+              b.vx *= 0.75; b.vy *= 0.75;
+              other.vx *= 0.75; other.vy *= 0.75;
+            }
+          }
+        }
+
+        // 紫球加速
+        if(b.id === 4){
+          b.purpleCheckT += h;
+          if(b.purpleCheckT >= PURPLE_CHECK_PERIOD){
+            b.purpleCheckT = 0;
+            if(Math.random() < PURPLE_TRIGGER_P) b.purpleBoostT = PURPLE_BOOST_DUR;
+          }
+          b.purpleBoostT = Math.max(0, b.purpleBoostT - h);
+        }else{
+          b.purpleBoostT = 0;
+          b.purpleCheckT = 0;
+        }
+
+        applyRings(b, h);
+        applyTriggers(b, h, balls);
+        applyWind(b, h);
+        applyBlackWhiteHoles(b);
+
+        const eff = zoneEffects(b);
+
+        // 場地重力效果（重力帶）+ 低重力圈
+        const baseG = (b.lowGTimer > 0) ? g0*0.40 : g0;
+        const g = baseG * eff.gMul;
+
+        b.lowGTimer = Math.max(0, b.lowGTimer - h);
+
+        const speedMul =
+          (b.id===0) ? RED_SPEED_MUL :
+          (b.id===2) ? GREEN_SPEED_MUL : 1.0;
+
+        b.vy += g * h;
+
+        let k = clamp(BASE_DRAG + eff.dragAdd, 0, 4.2);
+        const dragMul = Math.max(0.0, 1.0 - k*h);
+        b.vx *= dragMul;
+        b.vy *= dragMul;
+
+        b.vx *= eff.brakeMul;
+        b.vy *= eff.brakeMul;
+
+        b.vx *= eff.boostMul;
+        b.vy *= eff.boostMul;
+
+        if(b.id === 4 && b.purpleBoostT > 0){
+          b.vx *= PURPLE_BOOST_MUL;
+          b.vy *= PURPLE_BOOST_MUL;
+        }
+
+        b.vx *= speedMul;
+        b.vy *= speedMul;
+
+        const maxSp = MAX_SPEED_BASE * ((b.id===0)?1.12:1.0);
+        const sp = Math.hypot(b.vx, b.vy);
+        if(sp > maxSp){
+          const s = maxSp / sp;
+          b.vx *= s; b.vy *= s;
+        }
+
+        b.x += b.vx * h;
+        b.y += b.vy * h;
+
+        let restitution = WALL_RESTITUTION * eff.restMul * eff.bounceMul;
+        restitution = clamp(restitution, 0.55, 1.10);
+
+        const push = 2.8;
+
+        // 外牆
+        for(const ob of map.obstaclesRect){
+          const hit = circleAABB(b.x, b.y, R, ob);
+          if(hit){
+            b.x += hit.nx * push;
+            b.y += hit.ny * push;
+            const rv = reflect(b.vx, b.vy, hit.nx, hit.ny);
+            b.vx = rv.vx * restitution;
+            b.vy = rv.vy * restitution;
+          }
+        }
+
+        // 竿碰撞
+        for(const seg of map.segsStatic){
+          const hit = circleSegmentHit(b.x, b.y, R, seg);
+          if(!hit) continue;
+
+          b.x += hit.nx * Math.max(push, hit.pen + 1.0);
+          b.y += hit.ny * Math.max(push, hit.pen + 1.0);
+          const rv = reflect(b.vx, b.vy, hit.nx, hit.ny);
+          b.vx = rv.vx * restitution;
+          b.vy = rv.vy * restitution;
+        }
+
+        // 黏性桿（橘）
+        for(const seg of map.segsSticky){
+          const hit = circleSegmentHit(b.x, b.y, R, seg);
+          if(!hit) continue;
+
+          b.x += hit.nx * Math.max(push, hit.pen + 1.0);
+          b.y += hit.ny * Math.max(push, hit.pen + 1.0);
+          applyStickyRoll(b, seg, eff);
+        }
+
+        // 滑落桿
+        for(const seg of map.segsSlide){
+          const hit = circleSegmentHit(b.x, b.y, R, seg);
+          if(!hit) continue;
+
+          b.x += hit.nx * Math.max(push, hit.pen + 1.0);
+          b.y += hit.ny * Math.max(push, hit.pen + 1.0);
+          applySlideResponse(b, seg, eff);
+        }
+
+        // 動態桿
+        for(const seg of dynSegs){
+          const hit = circleSegmentHit(b.x, b.y, R, seg);
+          if(!hit) continue;
+
+          b.x += hit.nx * Math.max(push, hit.pen + 1.0);
+          b.y += hit.ny * Math.max(push, hit.pen + 1.0);
+          const rv = reflect(b.vx, b.vy, hit.nx, hit.ny);
+          b.vx = rv.vx * restitution;
+          b.vy = rv.vy * restitution;
+        }
+
+        // 弧門
+        for(const arc of map.rotatingArcs){
+          const hit = arcHit(b, arc, globalTime);
+          if(!hit) continue;
+
+          b.x += hit.nx * (push + hit.pen);
+          b.y += hit.ny * (push + hit.pen);
+          const rv = reflect(b.vx, b.vy, hit.nx, hit.ny);
+          b.vx = rv.vx * restitution;
+          b.vy = rv.vy * restitution;
+        }
+
+        b.x = clamp(b.x, R+1, WORLD_W-R-1);
+        antiStuckNudge(b);
+
+        // 卡死回原點
+        b.stuckT += h;
+        const dy = b.y - b.stuckY0;
+        const speedNow = Math.hypot(b.vx, b.vy);
+        if(b.stuckT >= STUCK_T){
+          if(dy < STUCK_DY && speedNow < STUCK_V){
+            resetBallToStart(b);
+          }else{
+            b.stuckT = 0;
+            b.stuckY0 = b.y;
+          }
+        }
+
+        // 終點
+        if(b.y >= map.finish.y - map.finish.h/2 && b.y <= map.finish.y + map.finish.h/2){
+          raceStopped = true;
+          break;
+        }
+      }
+
+      if(raceStopped) return;
+
+      // 球-球
+      for(let iter=0; iter<2; iter++){
+        for(let i=0;i<balls.length;i++){
+          for(let j=i+1;j<balls.length;j++){
+            resolveBallBallElastic(balls[i], balls[j]);
+          }
+        }
+      }
+    }
+  }
+
+  // === 繪圖 ===
+  function rrPath(x,y,w,h,r){
+    r = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function zoneStyle(type){
+    if(type==="boost")  return {fill:"rgba(40,255,210,.13)", stroke:"rgba(40,255,210,.86)", label:"增益"};
+    if(type==="mud")    return {fill:"rgba(90,120,255,.20)", stroke:"rgba(90,120,255,.92)", label:"泥沼"};
+    if(type==="brake")  return {fill:"rgba(255,80,140,.16)", stroke:"rgba(255,80,140,.88)", label:"煞車"};
+    if(type==="sticky") return {fill:"rgba(200,120,255,.16)", stroke:"rgba(200,120,255,.88)", label:"黏滯"};
+    if(type==="gravity")return {fill:"rgba(255,255,255,.08)", stroke:"rgba(255,255,255,.46)", label:"重力"};
+    return {fill:"rgba(255,210,80,.11)", stroke:"rgba(255,210,80,.80)", label:"彈跳"};
+  }
+  function ringStyle(type){
+    if(type==="boostRing") return {stroke:"rgba(40,255,210,.95)", glow:"rgba(40,255,210,.24)"};
+    if(type==="slowRing")  return {stroke:"rgba(90,120,255,.95)", glow:"rgba(90,120,255,.24)"};
+    if(type==="kickRing")  return {stroke:"rgba(255,210,80,.95)", glow:"rgba(255,210,80,.22)"};
+    if(type==="lowGRing")  return {stroke:"rgba(200,120,255,.95)", glow:"rgba(200,120,255,.20)"};
+    return {stroke:"rgba(255,255,255,.90)", glow:"rgba(255,255,255,.18)", tele:true};
+  }
+  function trigStyle(type){
+    if(type==="burstDown") return {stroke:"rgba(40,255,210,.92)", glow:"rgba(40,255,210,.22)", label:"↓"};
+    if(type==="brakeTrig") return {stroke:"rgba(255,80,140,.92)", glow:"rgba(255,80,140,.20)", label:"⟂"};
+    if(type==="sideKick")  return {stroke:"rgba(255,210,80,.92)", glow:"rgba(255,210,80,.20)", label:"⇆"};
+    if(type==="swap")      return {stroke:"rgba(200,120,255,.92)", glow:"rgba(200,120,255,.20)", label:"⇄"};
+    return {stroke:"rgba(255,255,255,.90)", glow:"rgba(255,255,255,.16)", label:"✶"};
+  }
+
+  function drawWindField(wf){
+    ctx.save();
+    ctx.translate(wf.cx, wf.cy);
+    ctx.rotate(wf.ang);
+
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = "rgba(40,255,210,.46)";
+    rrPath(-wf.hw, -wf.hh, wf.hw*2, wf.hh*2, 18);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.28;
+    ctx.strokeStyle = "rgba(90,120,255,.78)";
+    ctx.lineWidth = 2.4;
+    rrPath(-wf.hw, -wf.hh, wf.hw*2, wf.hh*2, 18);
+    ctx.stroke();
+
+    const t = globalTime*120;
+    const stepX = 120;
+    const stepY = 44;
+
+    ctx.globalAlpha = 0.62;
+    ctx.strokeStyle = "rgba(90,120,255,.76)";
+    ctx.lineWidth = 2;
+
+    for(let yy=-wf.hh+18; yy<wf.hh-18; yy+=stepY){
+      for(let xx=-wf.hw; xx<wf.hw; xx+=stepX){
+        const x = xx + (t % stepX);
+        const len = 30;
+        const dir = wf.dir;
+
+        ctx.beginPath();
+        ctx.moveTo(x, yy);
+        ctx.lineTo(x + dir*len, yy);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x + dir*len, yy);
+        ctx.lineTo(x + dir*(len-8), yy - 5);
+        ctx.lineTo(x + dir*(len-8), yy + 5);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(90,120,255,.68)";
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawSeg(seg, style){
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = style.glow;
+    ctx.lineWidth = seg.thick + 18;
+    ctx.beginPath(); ctx.moveTo(seg.x1, seg.y1); ctx.lineTo(seg.x2, seg.y2); ctx.stroke();
+
+    ctx.globalAlpha = 0.26;
+    ctx.strokeStyle = style.mid;
+    ctx.lineWidth = seg.thick + 12;
+    ctx.beginPath(); ctx.moveTo(seg.x1, seg.y1); ctx.lineTo(seg.x2, seg.y2); ctx.stroke();
+
+    ctx.globalAlpha = 0.92;
+    ctx.strokeStyle = style.core;
+    ctx.lineWidth = seg.thick;
+    ctx.beginPath(); ctx.moveTo(seg.x1, seg.y1); ctx.lineTo(seg.x2, seg.y2); ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,VW,VH);
+
+    // 背景格線
+    ctx.save();
+    ctx.globalAlpha = 0.085;
+    ctx.strokeStyle = "rgba(255,255,255,.90)";
+    ctx.lineWidth = 1;
+    const grid = 46;
+    const startY = - ((camY*getZoom()) % grid);
+    for(let x=0;x<=VW;x+=grid){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,VH); ctx.stroke(); }
+    for(let y=startY; y<=VH; y+=grid){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(VW,y); ctx.stroke(); }
+    ctx.restore();
+
+    const z = getZoom();
+    ctx.save();
+    ctx.scale(z, z);
+    ctx.translate(-camX, -camY);
+
+    // 風場
+    for(const wf of map.windFields) drawWindField(wf);
+
+    // zones
+    for(const z0 of map.zonesRect){
+      const st = zoneStyle(z0.type);
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = st.stroke;
+      rrPath(z0.x-6, z0.y-6, z0.w+12, z0.h+12, 18);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = st.fill;
+      ctx.strokeStyle = st.stroke;
+      ctx.lineWidth = 2.8;
+      rrPath(z0.x, z0.y, z0.w, z0.h, 18);
+      ctx.fill(); ctx.stroke();
+
+      // 標示
+      const label = st.label;
+      ctx.globalAlpha = 0.92;
+      ctx.font = "12px system-ui";
+      const tw = ctx.measureText(label).width;
+      const lx = z0.x + 12;
+      const ly = z0.y + 12;
+      const lw = tw + 18;
+      const lh = 20;
+
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = "rgba(0,0,0,.62)";
+      rrPath(lx+2, ly+2, lw, lh, 10);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.86;
+      ctx.fillStyle = "rgba(0,0,0,.52)";
+      rrPath(lx, ly, lw, lh, 10);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.92;
+      ctx.strokeStyle = st.stroke;
+      ctx.lineWidth = 1.6;
+      rrPath(lx, ly, lw, lh, 10);
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.94;
+      ctx.fillStyle = "rgba(255,255,255,.90)";
+      ctx.fillText(label, lx+9, ly+14);
+      ctx.restore();
+    }
+
+    // rings
+    for(const rg of map.rings){
+      const st = ringStyle(rg.type);
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      ctx.strokeStyle = st.glow;
+      ctx.lineWidth = 18;
+      ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, Math.PI*2); ctx.stroke();
+
+      ctx.globalAlpha = 0.96;
+      ctx.strokeStyle = st.stroke;
+      ctx.lineWidth = 5.0;
+      ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, Math.PI*2); ctx.stroke();
+
+      if(st.tele){
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = "rgba(200,120,255,.92)";
+        ctx.lineWidth = 5.2;
+        ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, Math.PI); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // triggers
+    for(const tg of map.triggers){
+      const st = trigStyle(tg.type);
+      ctx.save();
+      ctx.globalAlpha = 0.42;
+      ctx.strokeStyle = st.glow;
+      ctx.lineWidth = 16;
+      ctx.beginPath(); ctx.arc(tg.x, tg.y, tg.r, 0, Math.PI*2); ctx.stroke();
+
+      ctx.globalAlpha = 0.96;
+      ctx.strokeStyle = st.stroke;
+      ctx.lineWidth = 4.4;
+      ctx.beginPath(); ctx.arc(tg.x, tg.y, tg.r, 0, Math.PI*2); ctx.stroke();
+
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "rgba(0,0,0,.44)";
+      ctx.beginPath(); ctx.arc(tg.x, tg.y, tg.r-6, 0, Math.PI*2); ctx.fill();
+
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "rgba(255,255,255,.90)";
+      ctx.font = "900 14px system-ui";
+      ctx.fillText(st.label, tg.x-5, tg.y+5);
+
+      ctx.restore();
+    }
+
+    // black/white holes
+    for(const h of map.blackHoles){
+      ctx.save();
+      ctx.globalAlpha = 0.86;
+      ctx.fillStyle = "rgba(0,0,0,.92)";
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.r, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 0.26;
+      ctx.strokeStyle = "rgba(255,255,255,.42)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(h.x, h.y, h.r+11, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+    for(const w of map.whiteHoles){
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "rgba(255,255,255,.92)";
+      ctx.beginPath(); ctx.arc(w.x, w.y, w.r, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = "rgba(40,255,210,.55)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(w.x, w.y, w.r+14, 0, Math.PI*2); ctx.stroke();
+      ctx.restore();
+    }
+
+    // segments
+    for(const seg of map.segsStatic){
+      drawSeg(seg, {glow:"rgba(255,255,255,.14)", mid:"rgba(255,255,255,.20)", core:"rgba(255,255,255,.18)"});
+    }
+    for(const seg of map.segsSticky){
+      drawSeg(seg, {glow:"rgba(255,160,60,.20)", mid:"rgba(255,160,60,.26)", core:"rgba(255,160,60,.30)"});
+    }
+    for(const seg of map.segsSlide){
+      drawSeg(seg, {glow:"rgba(255,255,255,.16)", mid:"rgba(255,255,255,.22)", core:"rgba(255,255,255,.26)"});
+    }
+    for(const mb of map.movingBars){
+      const seg = evalMovingSeg(mb, globalTime);
+      drawSeg(seg, {glow:"rgba(80,170,255,.18)", mid:"rgba(80,170,255,.22)", core:"rgba(80,170,255,.24)"});
+    }
+    for(const rb of map.rotatingBars){
+      const seg = evalRotSeg(rb, globalTime);
+      drawSeg(seg, {glow:"rgba(60,255,170,.16)", mid:"rgba(60,255,170,.20)", core:"rgba(60,255,170,.22)"});
+    }
+    for(const arc of map.rotatingArcs){
+      const ang = arc.angle + arc.omega*globalTime;
+      ctx.save();
+      ctx.globalAlpha = 0.20;
+      ctx.strokeStyle = "rgba(60,255,170,.18)";
+      ctx.lineWidth = arc.thick + 16;
+      ctx.beginPath(); ctx.arc(arc.cx, arc.cy, arc.rr, ang, ang+Math.PI); ctx.stroke();
+      ctx.globalAlpha = 0.90;
+      ctx.strokeStyle = "rgba(60,255,170,.26)";
+      ctx.lineWidth = arc.thick;
+      ctx.beginPath(); ctx.arc(arc.cx, arc.cy, arc.rr, ang, ang+Math.PI); ctx.stroke();
+      ctx.restore();
+    }
+
+    // start/finish
+    ctx.save();
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = "rgba(255,255,255,.70)";
+    ctx.beginPath(); ctx.arc(map.start.x, map.start.y, 36, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = "rgba(255,255,255,.06)";
+    ctx.strokeStyle = "rgba(255,255,255,.24)";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(map.start.x, map.start.y, 29, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,.82)";
+    ctx.font = "12px system-ui";
+    ctx.fillText("START", map.start.x - 18, map.start.y - 42);
+
+    const f = map.finish;
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = "rgba(255,255,255,.78)";
+    ctx.fillRect(0, f.y - f.h/2, WORLD_W, f.h);
+    ctx.globalAlpha = 0.95;
+    ctx.strokeStyle = "rgba(255,255,255,.46)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, f.y - f.h/2, WORLD_W, f.h);
+    ctx.fillStyle = "rgba(255,255,255,.86)";
+    ctx.fillText("FINISH", 16, f.y - 16);
+    ctx.restore();
+
+    // balls
+    for(const b of balls){
+      ctx.save();
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = "rgba(0,0,0,.70)";
+      ctx.beginPath(); ctx.arc(b.x+3, b.y+4, R*1.05, 0, Math.PI*2); ctx.fill();
+
+      // 綠球光環可視化
+      if(b.id === 2 && b.greenAuraActive){
+        ctx.globalAlpha = 0.08;
+        ctx.strokeStyle = "rgba(60,255,170,.95)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.x, b.y, GREEN_AURA_R, 0, Math.PI*2); ctx.stroke();
+      }
+
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = b.color;
+      ctx.beginPath(); ctx.arc(b.x, b.y, R+7, 0, Math.PI*2); ctx.fill();
+
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = b.color;
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(b.x, b.y, R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+      if(b.id === 4 && b.purpleBoostT > 0){
+        ctx.globalAlpha = 0.62;
+        ctx.strokeStyle = "rgba(255,255,255,.80)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.x, b.y, R+11, 0, Math.PI*2); ctx.stroke();
+      }
+      if(b.freezeTimer > 0){
+        ctx.globalAlpha = 0.70;
+        ctx.strokeStyle = "rgba(255,255,255,.55)";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.x, b.y, R+12, 0, Math.PI*2); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    ctx.restore();
+
+    // 上方 HUD
+    ctx.save();
+    ctx.globalAlpha = 0.82;
+    ctx.fillStyle = "rgba(0,0,0,.34)";
+    ctx.fillRect(12, 12, Math.min(980, VW-24), 36);
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.font = "12px system-ui";
+    const status = raceStopped ? "已停止（首到終點）" : (running ? "進行中" : "檢視");
+    const pickName = (chosenBallId===null) ? "未押注" : ballsDef[chosenBallId].name;
+    const pickOdds = (chosenBallId===null) ? "--" : odds[chosenBallId].toFixed(2);
+    const bm = betModes[betMode].name;
+    ctx.fillText(`押注模式：${bm}｜本次下注 ${currentBetAmount.toFixed(1)}｜押注球：${pickName}｜賠率 ${pickOdds}｜狀態：${status}｜鏡頭：${camMode==="auto"?"跟隨":"自由"}｜放大 ${zoomFactor.toFixed(2)}×`, 20, 35);
+    ctx.restore();
+
+    if(paused){
+      ctx.save();
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = "rgba(0,0,0,.62)";
+      ctx.fillRect(0,0,VW,VH);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "white";
+      ctx.font = "900 28px system-ui";
+      ctx.fillText("暫停", VW/2-28, VH/2-10);
+      ctx.font = "14px system-ui";
+      ctx.fillText("按「暫停/繼續」繼續", VW/2-82, VH/2+18);
+      ctx.restore();
+    }
+  }
+
+  // === 輸入（含慣性） ===
+  canvas.addEventListener("wheel", (e)=>{
+    e.preventDefault();
+    setCamMode("free");
+    inertiaOn = false;
+    const z = getZoom();
+    if(e.shiftKey){
+      camX += (e.deltaY * 0.9) / z;
+    }else{
+      camY += (e.deltaY * 0.9) / z;
+    }
+    clampCam();
+  }, {passive:false});
+
+  canvas.addEventListener("pointerdown", (e)=>{
+    e.preventDefault();
+    camDragging = true;
+    camDragPointerId = e.pointerId;
+    canvas.setPointerCapture(e.pointerId);
+
+    setCamMode("free");
+    inertiaOn = false;
+    inertiaVX = inertiaVY = 0;
+    dragSamples.length = 0;
+    dragSamples.push({t:performance.now(), x:e.clientX, y:e.clientY, camX, camY});
+  });
+
+  canvas.addEventListener("pointermove", (e)=>{
+    if(!camDragging || e.pointerId !== camDragPointerId) return;
+    e.preventDefault();
+
+    const z = getZoom();
+    const last = dragSamples[dragSamples.length-1];
+    const dx = (e.clientX - last.x);
+    const dy = (e.clientY - last.y);
+
+    camX -= dx / z;
+    camY -= dy / z;
+    clampCam();
+
+    dragSamples.push({t:performance.now(), x:e.clientX, y:e.clientY, camX, camY});
+    if(dragSamples.length > MAX_SAMPLES) dragSamples.shift();
+  });
+
+  function endDrag(e){
+    if(!camDragging || e.pointerId !== camDragPointerId) return;
+    camDragging = false;
+    camDragPointerId = null;
+
+    if(dragSamples.length >= 2){
+      const a = dragSamples[Math.max(0, dragSamples.length-6)];
+      const b = dragSamples[dragSamples.length-1];
+      const dt = Math.max(0.016, (b.t - a.t)/1000);
+      inertiaVX = (b.camX - a.camX) / dt;
+      inertiaVY = (b.camY - a.camY) / dt;
+
+      const sp = Math.hypot(inertiaVX, inertiaVY);
+      if(sp > 40){
+        const max = 2200;
+        const s = Math.min(1, max / sp);
+        inertiaVX *= s;
+        inertiaVY *= s;
+        inertiaOn = true;
+      }
+    }
+    dragSamples.length = 0;
+  }
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  // === 控制 ===
+  btnPreview.addEventListener("click", ()=>{
+    setCamMode("auto");
+    inertiaOn = false;
+    centerOnStart();
+  });
+
+  btnPause.addEventListener("click", ()=>{
+    if(!running || dead) return;
+    paused = !paused;
+    setState(paused ? "暫停" : "進行中");
+  });
+
+  btnReset.addEventListener("click", ()=>{
+    hp = 100;
+    dead = false;
+    running = false;
+    paused = false;
+    betLocked = false;
+    lastRank = null;
+    odds = [2,2,2,2,2];
+    chosenBallId = null;
+
+    renderHP();
+    updateOddsFromLastRank();
+
+    refillMapPool();
+    nextRandomMap();
+    initBalls();
+    centerOnStart();
+    setCamMode("auto");
+    setState("檢視地圖");
+
+    updateBetUI();
+    renderBallList();
+
+    elResultBody.innerHTML = `<tr><td colspan="4" style="color:rgba(255,255,255,.65)">尚未開始（先選押注模式，再按任一球「押注」）</td></tr>`;
+  });
+
+  // === 主迴圈 ===
+  let globalNowPrev = performance.now();
+  function loop(now){
+    const dt = Math.min(0.033, (now - globalNowPrev)/1000);
+    globalNowPrev = now;
+
+    if(running && !paused && !dead){
+      physicsStep(dt);
+      if(raceStopped) settleByDistance();
+    }
+
+    updateCamera(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // === 初始化 ===
+  function init(){
+    resizeCanvas();
+    setZoomFactor(1.00);
+    renderHP();
+
+    refillMapPool();
+    nextRandomMap();
+
+    updateOddsFromLastRank();
+
+    initBalls();
+    centerOnStart();
+    setCamMode("auto");
+    setState("檢視地圖");
+
+    updateBetUI();
+    renderBallList();
+
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
