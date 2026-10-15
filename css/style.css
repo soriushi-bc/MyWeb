@@ -115,6 +115,10 @@ a{
     text-decoration:underline;
 }
 
+ul li {
+    border-bottom: none;
+}
+
 /* 輪播 */
 .head-slider {
     position: relative;
@@ -398,6 +402,8 @@ a{
 .contact-icon {
     font-size: 20px;
 }
+
+
 
 
 /* Drawing */
